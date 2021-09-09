@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,14 +8,25 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Extensions.SignalRService;
 using Newtonsoft.Json;
 
+using Microsoft.Azure.EventHubs;
+using Microsoft.Extensions.Logging;
+using System.Text;
+using Newtonsoft.Json.Linq;
+
+//using System.Net.Http;
+
 namespace CSharp
 {
+    /// <summary>
+    /// https://azure.microsoft.com/en-us/pricing/details/signalr-service/
+    ///
+    /// https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/QuickStartServerless/csharp
+    /// </summary>
+
     public static class Function
     {
-        private static HttpClient httpClient = new HttpClient();
-
         [FunctionName("index")]
-        public static IActionResult GetHomePage([HttpTrigger(AuthorizationLevel.Anonymous)]HttpRequest req, ExecutionContext context)
+        public static IActionResult GetHomePage([HttpTrigger(AuthorizationLevel.Anonymous)] HttpRequest req, ExecutionContext context)
         {
             var path = Path.Combine(context.FunctionAppDirectory, "content", "index.html");
             return new ContentResult
@@ -27,7 +37,7 @@ namespace CSharp
         }
 
         [FunctionName("negotiate")]
-        public static SignalRConnectionInfo Negotiate( 
+        public static SignalRConnectionInfo Negotiate(
             [HttpTrigger(AuthorizationLevel.Anonymous)] HttpRequest req,
             [SignalRConnectionInfo(HubName = "serverless")] SignalRConnectionInfo connectionInfo)
         {
@@ -35,26 +45,53 @@ namespace CSharp
         }
 
         [FunctionName("broadcast")]
-        public static async Task Broadcast([TimerTrigger("*/5 * * * * *")] TimerInfo myTimer,
-        [SignalR(HubName = "serverless")] IAsyncCollector<SignalRMessage> signalRMessages)
+        public static async Task Broadcast(
+            [EventHubTrigger("dummy", ConsumerGroup = "afa", Connection = "ttn-ih-test-weu-ih_events_IOTHUB")] EventData message,
+            ILogger log,
+            [SignalR(HubName = "serverless")] IAsyncCollector<SignalRMessage> signalRMessages)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/repos/azure/azure-signalr");
-            request.Headers.UserAgent.ParseAdd("Serverless");
-            var response = await httpClient.SendAsync(request);
-            var result = JsonConvert.DeserializeObject<GitResult>(await response.Content.ReadAsStringAsync());
-            await signalRMessages.AddAsync(
-                new SignalRMessage
-                {
-                    Target = "newMessage",
-                    Arguments = new[] { $"Current star count of https://github.com/Azure/azure-signalr is: {result.StartCount}" }
-                });
+            dynamic data = JObject.Parse(Encoding.UTF8.GetString(message.Body.Array));
+
+            var webMessage = new WebMessage();
+            webMessage.deviceId = (string)data.end_device_ids.device_id;
+            webMessage.timestamp = DateTime.Parse((string)data.received_at).ToUniversalTime();
+
+            if (data != null
+                    && data.uplink_message != null
+                    && data.uplink_message.decoded_payload != null
+                    && data.uplink_message.decoded_payload.latitude != null
+                    && data.uplink_message.decoded_payload.longitude != null
+                    && data.uplink_message.decoded_payload.battery != null)
+            {
+                webMessage.battery = (string)data.uplink_message.decoded_payload.battery;
+                webMessage.latitude = (decimal)data.uplink_message.decoded_payload.latitude;
+                webMessage.longitude = (decimal)data.uplink_message.decoded_payload.longitude;
+
+                log.LogInformation($"MESSAGE SENT: DeviceId: {webMessage.deviceId} - timestamp: {webMessage.timestamp} - lat: {webMessage.latitude} - lon: {webMessage.longitude} ");
+
+                var json = JsonConvert.SerializeObject(webMessage);
+
+                await Task.Delay(1);
+                await signalRMessages.AddAsync(
+                    new SignalRMessage
+                    {
+                        Target = "gpsMessage",
+                        Arguments = new[] { json }
+                    });
+            }
+            else
+            {
+                //log.LogInformation($"NULL ENCOUNTERED {myIoTHubMessage}");
+            }
         }
 
-        private class GitResult
+        public class WebMessage
         {
-            [JsonRequired]
-            [JsonProperty("stargazers_count")]
-            public string StartCount { get; set; }
+            public string deviceId { get; set; }
+            public DateTime timestamp { get; set; }
+            public decimal latitude { get; set; }
+            public decimal longitude { get; set; }
+            public string battery { get; set; }
         }
     }
 }

@@ -1,23 +1,91 @@
 <html>
 
-<body>
-  <h1>Azure SignalR Serverless Sample</h1>
-  <div id="messages"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/3.1.7/signalr.min.js"></script>
-  <script>
-    let messages = document.querySelector('#messages');
-    const apiBaseUrl = window.location.origin;
-    const connection = new signalR.HubConnectionBuilder()
-        .withUrl(apiBaseUrl + '/api')
-        .configureLogging(signalR.LogLevel.Information)
-        .build();
-      connection.on('newMessage', (message) => {
-        document.getElementById("messages").innerHTML = message;
-      });
+<head>
+    <meta charset="utf-8">
 
-      connection.start()
-        .catch(console.error);
-  </script>
+    <!-- Ensures that IE and Edge uses the latest version and doesn't emulate an older version -->
+    <meta http-equiv="x-ua-compatible" content="IE=Edge">
+    <!-- Ensures the web page looks good on all screen sizes. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Add references to the Azure Maps Map control JavaScript and CSS files. -->
+    <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.css" type="text/css">
+    <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/3.1.7/signalr.min.js"></script>
+
+    <style>
+        html, body {
+            margin: 10;
+        }
+
+        #myMap {
+            height: 90vh;
+            width: 90vw;
+        }
+    </style>
+
+    <script>
+        var map;
+        var popups = [];
+        var dataSource;
+
+        function InitMapAndSignalR() {
+            map = new atlas.Map('myMap', {
+                center: [5.55, 51.5],
+                zoom: 10,
+                view: "Auto",
+                language: 'en-US',
+                authOptions: {
+                    authType: 'subscriptionKey',
+                    subscriptionKey: 'TTwUawjUKHW7cfBOeuldtsfHZNnQ7BW11AEZR4nEVo4'
+                }
+            });
+
+            //Construct a zoom control and add it to the map.
+            map.controls.add(new atlas.control.ZoomControl(), {
+                position: 'bottom-right'
+            });
+
+            map.events.add('ready', function () {
+
+                //Create a data source and add it to the map.
+                dataSource = new atlas.source.DataSource();
+                map.sources.add(dataSource);
+
+                //Create a symbol layer to render icons and/or text at points on the map.
+                var layer = new atlas.layer.SymbolLayer(dataSource);
+
+                //Add the layer to the map.
+                map.layers.add(layer);
+
+                const apiBaseUrl = window.location.origin;
+
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl(apiBaseUrl + '/api')
+                    .configureLogging(signalR.LogLevel.Information)
+                    .build();
+
+                connection.on('gpsMessage', (message) => {
+                    document.getElementById("messages").innerHTML = message;
+
+                    const obj = JSON.parse(message);
+
+                    dataSource.clear();
+                    dataSource.add(new atlas.data.Point([obj.longitude, obj.latitude]));
+
+                });
+
+                connection.start()
+                    .catch(console.error);
+            });
+        }
+    </script>
+</head>
+
+<body onload="InitMapAndSignalR()">
+    <h1>Last known location</h1>
+    <div id="messages"></div>
+    <div id="myMap"></div>
 </body>
-
 </html>
