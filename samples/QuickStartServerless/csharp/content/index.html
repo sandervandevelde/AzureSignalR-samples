@@ -1,14 +1,11 @@
 <html>
-
 <head>
     <meta charset="utf-8">
-
     <!-- Ensures that IE and Edge uses the latest version and doesn't emulate an older version -->
     <meta http-equiv="x-ua-compatible" content="IE=Edge">
     <!-- Ensures the web page looks good on all screen sizes. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <!-- Add references to the Azure Maps Map control JavaScript and CSS files. -->
+    <!-- Adding references to the Azure Maps Map control JavaScript and CSS files. Adding SignalR. -->
     <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.css" type="text/css">
     <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -27,8 +24,7 @@
 
     <script>
         var map;
-        var popups = [];
-        var dataSource;
+        var mapsDataSource;
 
         function InitMapAndSignalR() {
             map = new atlas.Map('myMap', {
@@ -49,14 +45,14 @@
 
             map.events.add('ready', function () {
 
-                //Create a data source and add it to the map.
-                dataSource = new atlas.source.DataSource();
-                map.sources.add(dataSource);
+                // Create a data source and add it to the map.
+                mapsDataSource = new atlas.source.DataSource();
+                map.sources.add(mapsDataSource);
 
-                //Create a symbol layer to render icons and/or text at points on the map.
-                var layer = new atlas.layer.SymbolLayer(dataSource);
+                // Create a symbol layer to render icons and/or text at points on the map.
+                var layer = new atlas.layer.SymbolLayer(mapsDataSource);
 
-                //Add the layer to the map.
+                // Add the layer to the map.
                 map.layers.add(layer);
 
                 const apiBaseUrl = window.location.origin;
@@ -71,8 +67,9 @@
 
                     const obj = JSON.parse(message);
 
-                    dataSource.clear();
-                    dataSource.add(new atlas.data.Point([obj.longitude, obj.latitude]));
+                    // Replace the pin so only latest position is shown.
+                    mapsDataSource.clear();
+                    mapsDataSource.add(new atlas.data.Point([obj.longitude, obj.latitude]));
 
                 });
 

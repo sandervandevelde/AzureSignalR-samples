@@ -13,16 +13,8 @@ using Microsoft.Extensions.Logging;
 using System.Text;
 using Newtonsoft.Json.Linq;
 
-//using System.Net.Http;
-
 namespace CSharp
 {
-    /// <summary>
-    /// https://azure.microsoft.com/en-us/pricing/details/signalr-service/
-    ///
-    /// https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/QuickStartServerless/csharp
-    /// </summary>
-
     public static class Function
     {
         [FunctionName("index")]
@@ -67,21 +59,16 @@ namespace CSharp
                 webMessage.latitude = (decimal)data.uplink_message.decoded_payload.latitude;
                 webMessage.longitude = (decimal)data.uplink_message.decoded_payload.longitude;
 
-                log.LogInformation($"MESSAGE SENT: DeviceId: {webMessage.deviceId} - timestamp: {webMessage.timestamp} - lat: {webMessage.latitude} - lon: {webMessage.longitude} ");
+                log.LogInformation($"Message sent to webpage: DeviceId: {webMessage.deviceId} - timestamp: {webMessage.timestamp} - lat: {webMessage.latitude} - lon: {webMessage.longitude} ");
 
                 var json = JsonConvert.SerializeObject(webMessage);
 
-                await Task.Delay(1);
                 await signalRMessages.AddAsync(
                     new SignalRMessage
                     {
                         Target = "gpsMessage",
                         Arguments = new[] { json }
                     });
-            }
-            else
-            {
-                //log.LogInformation($"NULL ENCOUNTERED {myIoTHubMessage}");
             }
         }
 
