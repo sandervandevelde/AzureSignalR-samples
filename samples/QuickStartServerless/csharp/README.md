@@ -4,17 +4,9 @@ In this sample, we demonstrate how to broadcast messages with SignalR Service an
 
 ## Prerequisites
 
+* Visual Studio or Visual Studio Code
 * [Azure Function Core Tools](https://review.docs.microsoft.com/azure/azure-functions/functions-run-local?tabs=windows%2Ccsharp%2Cbash&branch=pr-en-us-162554#v2)
 * [.NET](https://dotnet.microsoft.com/download)
-
-## Setup and run locally
-
-1. Rename `local.settings.template.json` to `local.settings.json` and update `AzureSignalRConnectionString` setting to your SignalR Service connection string.
-
-1. Run `func start` to start Azure Function locally.
-
-1. Visit `http://localhost:7071/api/index` and you can see the result.
-
 
 ## SignalR
 
@@ -26,14 +18,14 @@ Pricing is seen here: https://azure.microsoft.com/en-us/pricing/details/signalr-
 
 This project is based on this example: https://github.com/aspnet/AzureSignalR-samples/tree/main/samples/QuickStartServerless/csharp
 
-That project is designed to be executed on a desktop machine.
+That original project was designed to be executed on a desktop machine.
 
-To deploy this to Azure Functions, just add the two application settings in your Azure Function App:
+To deploy this to Azure Functions in the cloud, just add the two application settings in your Azure Function App:
 
 - AzureSignalRConnectionString : The connectionstring of your SignalR service
 - ttn-ih-test-weu-ih_events_IOTHUB : This is the eventhub-compatible endpoint of your IoT Hub
 
-Notice the use of an IoT Hub consumer group named 'afa'
+Notice the use of an IoT Hub consumer group named 'afa'.
 
 
 ## AzureMap
@@ -46,3 +38,6 @@ Check the [documentation](https://docs.microsoft.com/en-us/azure/azure-maps/azur
 
 *Note*: The key shown in the sample code will be made obsolete once the code is made publicly available.
 
+## Source
+
+This sample is freely based on this [quick start](https://docs.microsoft.com/en-us/azure/azure-signalr/signalr-quickstart-azure-functions-csharp).
